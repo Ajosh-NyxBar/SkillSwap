@@ -70,3 +70,41 @@ type Match struct {
 	SeekingSkill   string `json:"seeking_skill"`
 	MatchScore     int    `json:"match_score"`
 }
+
+// ChatRoom represents a chat room between two users
+type ChatRoom struct {
+	ID            uint           `gorm:"primaryKey" json:"id"`
+	User1ID       uint           `gorm:"not null" json:"user1_id"`
+	User2ID       uint           `gorm:"not null" json:"user2_id"`
+	ExchangeID    *uint          `json:"exchange_id"` // Optional: link to specific exchange
+	IsActive      bool           `gorm:"default:true" json:"is_active"`
+	LastMessage   string         `json:"last_message,omitempty"`
+	LastMessageAt *time.Time     `json:"last_message_at,omitempty"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+
+	// Relationships
+	User1    User      `gorm:"foreignKey:User1ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"user1,omitempty"`
+	User2    User      `gorm:"foreignKey:User2ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"user2,omitempty"`
+	Exchange *Exchange `gorm:"foreignKey:ExchangeID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"exchange,omitempty"`
+	Messages []Message `gorm:"foreignKey:ChatRoomID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"messages,omitempty"`
+}
+
+// Message represents a chat message
+type Message struct {
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	ChatRoomID  uint           `gorm:"not null" json:"chat_room_id"`
+	SenderID    uint           `gorm:"not null" json:"sender_id"`
+	Content     string         `gorm:"type:text;not null" json:"content" validate:"required"`
+	MessageType string         `gorm:"default:'text'" json:"message_type" validate:"oneof=text image file system"`
+	IsRead      bool           `gorm:"default:false" json:"is_read"`
+	ReadAt      *time.Time     `json:"read_at,omitempty"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+
+	// Relationships
+	ChatRoom ChatRoom `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"chat_room,omitempty"`
+	Sender   User     `gorm:"foreignKey:SenderID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"sender,omitempty"`
+}
