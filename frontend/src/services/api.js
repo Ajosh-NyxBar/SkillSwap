@@ -59,3 +59,24 @@ export const chatAPI = {
   // Delete chat room
   deleteChatRoom: (roomId) => api.delete(`/chat/rooms/${roomId}`)
 }
+
+// Exchange API functions
+export const exchangeAPI = {
+  // Create a new exchange request
+  createExchange: (data) => api.post('/exchanges', data),
+  
+  // Get exchanges (sent, received, or all)
+  getExchanges: (type = '') => api.get('/exchanges', { params: type ? { type } : {} }),
+  
+  // Get exchange by ID
+  getExchangeById: (id) => api.get(`/exchanges/${id}`),
+  
+  // Update exchange status
+  updateExchangeStatus: (id, data) => api.put(`/exchanges/${id}/status`, data)
+}
+
+// Match API functions
+export const matchAPI = {
+  // Get skill matches for current user
+  getMatches: () => api.get('/matches')
+}
