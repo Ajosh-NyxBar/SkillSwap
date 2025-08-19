@@ -24,8 +24,8 @@ const Dashboard = () => {
     dispatch(fetchMatches())
   }, [dispatch])
 
-  const offeringSkills = userSkills.filter(skill => skill.skill_type === 'offering')
-  const seekingSkills = userSkills.filter(skill => skill.skill_type === 'seeking')
+  const offeringSkills = (userSkills || []).filter(skill => skill.skill_type === 'offering')
+  const seekingSkills = (userSkills || []).filter(skill => skill.skill_type === 'seeking')
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -67,7 +67,7 @@ const Dashboard = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{matches.length}</div>
+            <div className="text-2xl font-bold">{(matches || []).length}</div>
           </CardContent>
         </Card>
 
@@ -229,7 +229,7 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Matches */}
-      {matches.length > 0 && (
+      {(matches || []).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -242,7 +242,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {matches.slice(0, 3).map((match) => (
+              {(matches || []).slice(0, 3).map((match) => (
                 <div key={`${match.user_id}-${match.offered_skill_id}`} className="p-4 border rounded-lg">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
@@ -260,10 +260,10 @@ const Dashboard = () => {
                 </div>
               ))}
             </div>
-            {matches.length > 3 && (
+            {(matches || []).length > 3 && (
               <Link to="/matches">
                 <Button variant="outline" className="w-full mt-4">
-                  View All Matches ({matches.length - 3} more)
+                  View All Matches ({(matches || []).length - 3} more)
                 </Button>
               </Link>
             )}
