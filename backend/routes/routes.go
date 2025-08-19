@@ -5,14 +5,16 @@ import (
 	"skillswap-backend/middleware"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func SetupRoutes(router *gin.Engine) {
+func SetupRoutes(router *gin.Engine, db *gorm.DB) {
 	// Initialize controllers
 	authController := &controllers.AuthController{}
 	skillController := &controllers.SkillController{}
 	exchangeController := &controllers.ExchangeController{}
 	matchController := &controllers.MatchController{}
+	chatController := controllers.NewChatController(db)
 
 	// API group
 	api := router.Group("/api")
@@ -60,6 +62,17 @@ func SetupRoutes(router *gin.Engine) {
 			matches := protected.Group("/matches")
 			{
 				matches.GET("", matchController.GetMatches)
+			}
+
+			// Chat routes
+			chat := protected.Group("/chat")
+			{
+				chat.GET("/rooms", chatController.GetChatRooms)
+				chat.POST("/rooms", chatController.CreateChatRoom)
+				chat.GET("/rooms/:roomId/messages", chatController.GetMessages)
+				chat.POST("/rooms/:roomId/messages", chatController.SendMessage)
+				chat.PUT("/rooms/:roomId/read", chatController.MarkMessagesAsRead)
+				chat.DELETE("/rooms/:roomId", chatController.DeleteChatRoom)
 			}
 		}
 	}

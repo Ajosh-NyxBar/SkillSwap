@@ -21,7 +21,7 @@ func main() {
 	config.ConnectDatabase()
 
 	// Auto migrate database tables
-	err := config.DB.AutoMigrate(&models.User{}, &models.Skill{}, &models.Exchange{})
+	err := config.DB.AutoMigrate(&models.User{}, &models.Skill{}, &models.Exchange{}, &models.ChatRoom{}, &models.Message{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
@@ -44,7 +44,7 @@ func main() {
 	})
 
 	// Setup routes
-	routes.SetupRoutes(router)
+	routes.SetupRoutes(router, config.DB)
 
 	// Start server
 	port := ":" + config.AppConfig.Port
