@@ -1,29 +1,82 @@
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { MessageSquare, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { exchangeAPI } from '../services/api'
+import { useToast } from '../components/ui/toaster'
 
 const Exchanges = () => {
-  // Mock data - replace with actual API calls
-  const exchanges = [
-    {
-      id: 1,
-      type: 'sent',
-      status: 'pending',
-      skill: 'Guitar Lessons',
-      partner: 'John Doe',
-      message: 'Hi! I would love to learn guitar from you in exchange for web development tutorials.',
-      created_at: '2024-01-15',
-    },
-    {
-      id: 2,
-      type: 'received',
-      status: 'accepted',
-      skill: 'Web Development',
-      partner: 'Jane Smith',
-      message: 'I can help you with advanced JavaScript concepts if you can teach me photography basics.',
-      created_at: '2024-01-14',
-    },
-  ]
+  const [exchanges, setExchanges] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const { toast } = useToast()
+
+  // Fetch exchanges on component mount
+  useEffect(() => {
+    fetchExchanges()
+  }, [])
+
+  const fetchExchanges = async () => {
+    try {
+      setLoading(true)
+      const response = await exchangeAPI.getExchanges()
+      const currentUserId = getCurrentUserId()
+      
+      // Transform the backend data to match the frontend structure
+      const transformedExchanges = response.data.map(exchange => {
+        const isSent = exchange.requester_id === currentUserId
+        return {
+          id: exchange.id,
+          type: isSent ? 'sent' : 'received',
+          status: exchange.status,
+          skill: exchange.skill?.name || 'Unknown Skill',
+          partner: isSent 
+            ? exchange.skill?.user?.username || 'Unknown User'
+            : exchange.requester?.username || 'Unknown User',
+          message: exchange.message || '',
+          created_at: exchange.created_at,
+          exchange_id: exchange.id
+        }
+      })
+      
+      setExchanges(transformedExchanges)
+    } catch (err) {
+      setError('Failed to fetch exchanges')
+      console.error('Error fetching exchanges:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Helper function to get current user ID from localStorage
+  const getCurrentUserId = () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return user.id
+  }
+
+  const handleUpdateExchangeStatus = async (exchangeId, status, responseText = '') => {
+    try {
+      await exchangeAPI.updateExchangeStatus(exchangeId, { 
+        status, 
+        response_text: responseText 
+      })
+      
+      // Refresh exchanges after status update
+      await fetchExchanges()
+      
+      toast({
+        title: "Success",
+        description: `Exchange ${status} successfully`,
+      })
+    } catch (err) {
+      console.error('Error updating exchange status:', err)
+      toast({
+        title: "Error",
+        description: "Failed to update exchange status",
+        variant: "destructive",
+      })
+    }
+  }
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -65,127 +118,171 @@ const Exchanges = () => {
         </p>
       </div>
 
-      {/* Exchange Tabs */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Sent Requests */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Sent Requests
-            </CardTitle>
-            <CardDescription>
-              Exchange requests you've sent to others
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {exchanges
-                .filter(exchange => exchange.type === 'sent')
-                .map((exchange) => (
-                <div key={exchange.id} className="p-4 border rounded-lg">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold">{exchange.skill}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        with {exchange.partner}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(exchange.status)}
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(exchange.status)}`}>
-                        {exchange.status}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm mb-3">{exchange.message}</p>
-                  <div className="flex justify-between items-center text-xs text-muted-foreground">
-                    <span>{new Date(exchange.created_at).toLocaleDateString()}</span>
-                    {exchange.status === 'pending' && (
-                      <Button size="sm" variant="outline">
-                        Cancel Request
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {loading && (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading exchanges...</p>
+        </div>
+      )}
 
-        {/* Received Requests */}
+      {error && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Received Requests
-            </CardTitle>
-            <CardDescription>
-              Exchange requests others have sent to you
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {exchanges
-                .filter(exchange => exchange.type === 'received')
-                .map((exchange) => (
-                <div key={exchange.id} className="p-4 border rounded-lg">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold">{exchange.skill}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        from {exchange.partner}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(exchange.status)}
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(exchange.status)}`}>
-                        {exchange.status}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm mb-3">{exchange.message}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(exchange.created_at).toLocaleDateString()}
-                    </span>
-                    {exchange.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
-                          Decline
-                        </Button>
-                        <Button size="sm">
-                          Accept
-                        </Button>
-                      </div>
-                    )}
-                    {exchange.status === 'accepted' && (
-                      <Button size="sm" variant="outline">
-                        Start Chat
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Empty State */}
-      {exchanges.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Exchange Requests</h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              You haven't sent or received any skill exchange requests yet. Start by finding matches and sending exchange requests!
-            </p>
-            <Button onClick={() => window.location.href = '/matches'}>
-              Find Matches
+          <CardContent className="text-center py-8">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600">{error}</p>
+            <Button onClick={fetchExchanges} className="mt-4">
+              Try Again
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {!loading && !error && (
+        <>
+          {/* Exchange Tabs */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Sent Requests */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Sent Requests
+                </CardTitle>
+                <CardDescription>
+                  Exchange requests you've sent to others
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {exchanges
+                    .filter(exchange => exchange.type === 'sent')
+                    .map((exchange) => (
+                    <div key={exchange.id} className="p-4 border rounded-lg">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold">{exchange.skill}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            with {exchange.partner}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(exchange.status)}
+                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(exchange.status)}`}>
+                            {exchange.status}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm mb-3">{exchange.message}</p>
+                      <div className="flex justify-between items-center text-xs text-muted-foreground">
+                        <span>{new Date(exchange.created_at).toLocaleDateString()}</span>
+                        {exchange.status === 'pending' && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleUpdateExchangeStatus(exchange.exchange_id, 'cancelled')}
+                          >
+                            Cancel Request
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {exchanges.filter(exchange => exchange.type === 'sent').length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No sent requests yet
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Received Requests */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Received Requests
+                </CardTitle>
+                <CardDescription>
+                  Exchange requests others have sent to you
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {exchanges
+                    .filter(exchange => exchange.type === 'received')
+                    .map((exchange) => (
+                    <div key={exchange.id} className="p-4 border rounded-lg">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold">{exchange.skill}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            from {exchange.partner}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(exchange.status)}
+                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(exchange.status)}`}>
+                            {exchange.status}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm mb-3">{exchange.message}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(exchange.created_at).toLocaleDateString()}
+                        </span>
+                        {exchange.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleUpdateExchangeStatus(exchange.exchange_id, 'rejected')}
+                            >
+                              Decline
+                            </Button>
+                            <Button 
+                              size="sm"
+                              onClick={() => handleUpdateExchangeStatus(exchange.exchange_id, 'accepted')}
+                            >
+                              Accept
+                            </Button>
+                          </div>
+                        )}
+                        {exchange.status === 'accepted' && (
+                          <Button size="sm" variant="outline">
+                            Start Chat
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {exchanges.filter(exchange => exchange.type === 'received').length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No received requests yet
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Empty State */}
+          {exchanges.length === 0 && (
+            <Card>
+              <CardContent className="text-center py-12">
+                <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Exchange Requests</h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  You haven't sent or received any skill exchange requests yet. Start by finding matches and sending exchange requests!
+                </p>
+                <Button onClick={() => window.location.href = '/matches'}>
+                  Find Matches
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Exchange Guidelines */}
