@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../services/api'
+import api, { matchAPI } from '../services/api'
 
 // Async thunks
 export const fetchSkills = createAsyncThunk(
@@ -71,8 +71,8 @@ export const fetchMatches = createAsyncThunk(
   'skills/fetchMatches',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/matches')
-      return response.data.matches
+      const response = await matchAPI.getMatches()
+      return response.data.matches || []
     } catch (error) {
       const errorMessage = error.response?.data?.error || error.message || 'Failed to fetch matches'
       return rejectWithValue(errorMessage)
