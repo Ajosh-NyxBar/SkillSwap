@@ -37,9 +37,9 @@ const Matches = () => {
       </div>
 
       {/* Matches Grid */}
-      {matches.length > 0 ? (
+      {(matches || []).length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {matches.map((match) => (
+          {(matches || []).map((match) => (
             <Card key={`${match.user_id}-${match.offered_skill_id}`} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
