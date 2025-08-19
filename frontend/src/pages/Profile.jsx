@@ -223,7 +223,7 @@ const Profile = () => {
             </div>
             <div>
               <h4 className="font-medium mb-2">Privacy & Security:</h4>
-              <div className="space-y-2">
+              <div className="space-y-4 space-x-3">
                 <Button variant="outline" size="sm">
                   Change Password
                 </Button>
