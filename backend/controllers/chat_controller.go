@@ -6,26 +6,20 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
+	"skillswap-backend/config"
 	"skillswap-backend/models"
 	"skillswap-backend/utils"
 )
 
-type ChatController struct {
-	DB *gorm.DB
-}
-
-func NewChatController(db *gorm.DB) *ChatController {
-	return &ChatController{DB: db}
-}
+type ChatController struct{}
 
 // GetChatRooms returns all chat rooms for the current user
 func (cc *ChatController) GetChatRooms(c *gin.Context) {
 	userID := utils.GetUserIDFromContext(c)
 
 	var chatRooms []models.ChatRoom
-	result := cc.DB.Where("user1_id = ? OR user2_id = ?", userID, userID).
+	result := config.DB.Where("user1_id = ? OR user2_id = ?", userID, userID).
 		Preload("User1").
 		Preload("User2").
 		Preload("Exchange").
@@ -77,7 +71,7 @@ func (cc *ChatController) CreateChatRoom(c *gin.Context) {
 
 	// Check if chat room already exists
 	var existingRoom models.ChatRoom
-	result := cc.DB.Where(
+	result := config.DB.Where(
 		"(user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)",
 		userID, req.OtherUserID, req.OtherUserID, userID,
 	).First(&existingRoom)
@@ -90,23 +84,25 @@ func (cc *ChatController) CreateChatRoom(c *gin.Context) {
 
 	// Create new chat room
 	chatRoom := models.ChatRoom{
-		User1ID:    userID,
-		User2ID:    req.OtherUserID,
-		ExchangeID: &req.ExchangeID,
-		IsActive:   true,
+		User1ID:  userID,
+		User2ID:  req.OtherUserID,
+		IsActive: true,
 	}
 
+	// Only set ExchangeID if it's not 0
 	if req.ExchangeID != 0 {
 		chatRoom.ExchangeID = &req.ExchangeID
+	} else {
+		chatRoom.ExchangeID = nil
 	}
 
-	if err := cc.DB.Create(&chatRoom).Error; err != nil {
+	if err := config.DB.Create(&chatRoom).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create chat room"})
 		return
 	}
 
 	// Preload relationships
-	cc.DB.Preload("User1").Preload("User2").Preload("Exchange").First(&chatRoom, chatRoom.ID)
+	config.DB.Preload("User1").Preload("User2").Preload("Exchange").First(&chatRoom, chatRoom.ID)
 
 	c.JSON(http.StatusCreated, gin.H{"chat_room": chatRoom})
 }
@@ -123,7 +119,7 @@ func (cc *ChatController) GetMessages(c *gin.Context) {
 
 	// Verify user has access to this chat room
 	var chatRoom models.ChatRoom
-	result := cc.DB.Where("id = ? AND (user1_id = ? OR user2_id = ?)", roomID, userID, userID).First(&chatRoom)
+	result := config.DB.Where("id = ? AND (user1_id = ? OR user2_id = ?)", roomID, userID, userID).First(&chatRoom)
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chat room not found"})
 		return
@@ -135,7 +131,7 @@ func (cc *ChatController) GetMessages(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	var messages []models.Message
-	result = cc.DB.Where("chat_room_id = ?", roomID).
+	result = config.DB.Where("chat_room_id = ?", roomID).
 		Preload("Sender").
 		Order("created_at DESC").
 		Limit(limit).
@@ -184,7 +180,7 @@ func (cc *ChatController) SendMessage(c *gin.Context) {
 
 	// Verify user has access to this chat room
 	var chatRoom models.ChatRoom
-	result := cc.DB.Where("id = ? AND (user1_id = ? OR user2_id = ?)", roomID, userID, userID).First(&chatRoom)
+	result := config.DB.Where("id = ? AND (user1_id = ? OR user2_id = ?)", roomID, userID, userID).First(&chatRoom)
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chat room not found"})
 		return
@@ -204,20 +200,20 @@ func (cc *ChatController) SendMessage(c *gin.Context) {
 		IsRead:      false,
 	}
 
-	if err := cc.DB.Create(&message).Error; err != nil {
+	if err := config.DB.Create(&message).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send message"})
 		return
 	}
 
 	// Update chat room last message
 	now := time.Now()
-	cc.DB.Model(&chatRoom).Updates(models.ChatRoom{
+	config.DB.Model(&chatRoom).Updates(models.ChatRoom{
 		LastMessage:   req.Content,
 		LastMessageAt: &now,
 	})
 
 	// Preload sender info
-	cc.DB.Preload("Sender").First(&message, message.ID)
+	config.DB.Preload("Sender").First(&message, message.ID)
 
 	c.JSON(http.StatusCreated, gin.H{"message": message})
 }
@@ -234,7 +230,7 @@ func (cc *ChatController) MarkMessagesAsRead(c *gin.Context) {
 
 	// Verify user has access to this chat room
 	var chatRoom models.ChatRoom
-	result := cc.DB.Where("id = ? AND (user1_id = ? OR user2_id = ?)", roomID, userID, userID).First(&chatRoom)
+	result := config.DB.Where("id = ? AND (user1_id = ? OR user2_id = ?)", roomID, userID, userID).First(&chatRoom)
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chat room not found"})
 		return
@@ -242,7 +238,7 @@ func (cc *ChatController) MarkMessagesAsRead(c *gin.Context) {
 
 	// Mark messages as read (messages not sent by current user)
 	now := time.Now()
-	result = cc.DB.Model(&models.Message{}).
+	result = config.DB.Model(&models.Message{}).
 		Where("chat_room_id = ? AND sender_id != ? AND is_read = false", roomID, userID).
 		Updates(map[string]interface{}{
 			"is_read": true,
@@ -269,14 +265,14 @@ func (cc *ChatController) DeleteChatRoom(c *gin.Context) {
 
 	// Verify user has access to this chat room
 	var chatRoom models.ChatRoom
-	result := cc.DB.Where("id = ? AND (user1_id = ? OR user2_id = ?)", roomID, userID, userID).First(&chatRoom)
+	result := config.DB.Where("id = ? AND (user1_id = ? OR user2_id = ?)", roomID, userID, userID).First(&chatRoom)
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chat room not found"})
 		return
 	}
 
 	// Soft delete the chat room
-	if err := cc.DB.Delete(&chatRoom).Error; err != nil {
+	if err := config.DB.Delete(&chatRoom).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete chat room"})
 		return
 	}

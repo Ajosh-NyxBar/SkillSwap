@@ -14,7 +14,7 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB) {
 	skillController := &controllers.SkillController{}
 	exchangeController := &controllers.ExchangeController{}
 	matchController := &controllers.MatchController{}
-	chatController := controllers.NewChatController(db)
+	chatController := &controllers.ChatController{}
 
 	// API group
 	api := router.Group("/api")

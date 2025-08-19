@@ -55,7 +55,7 @@ func ValidateJWT(tokenString string, jwtSecret string) (jwt.MapClaims, error) {
 
 // GetUserIDFromContext extracts user ID from gin context
 func GetUserIDFromContext(c *gin.Context) uint {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id") // Changed from "userID" to "user_id"
 	if !exists {
 		return 0
 	}
