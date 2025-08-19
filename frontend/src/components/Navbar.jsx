@@ -53,6 +53,10 @@ const Navbar = () => {
                   <MessageSquare size={16} />
                   <span>Exchanges</span>
                 </Link>
+                <Link to="/chat" className="flex items-center space-x-1 hover:text-primary-foreground/80">
+                  <MessageSquare size={16} />
+                  <span>Chat</span>
+                </Link>
                 <Link to="/profile" className="flex items-center space-x-1 hover:text-primary-foreground/80">
                   <User size={16} />
                   <span>{user?.full_name || 'Profile'}</span>
@@ -127,6 +131,14 @@ const Navbar = () => {
                 >
                   <MessageSquare size={16} />
                   <span>Exchanges</span>
+                </Link>
+                <Link 
+                  to="/chat" 
+                  className="flex items-center space-x-2 py-2 hover:text-primary-foreground/80"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <MessageSquare size={16} />
+                  <span>Chat</span>
                 </Link>
                 <Link 
                   to="/profile" 

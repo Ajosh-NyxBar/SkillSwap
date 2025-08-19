@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import Skills from './pages/Skills'
 import Matches from './pages/Matches'
 import Exchanges from './pages/Exchanges'
+import Chat from './pages/Chat'
 import Profile from './pages/Profile'
 
 function App() {
@@ -45,6 +46,10 @@ function App() {
           <Route
             path="/exchanges"
             element={token ? <Exchanges /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/chat"
+            element={token ? <Chat /> : <Navigate to="/login" />}
           />
           <Route
             path="/profile"
