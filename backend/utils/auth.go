@@ -3,6 +3,7 @@ package utils
 import (
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -50,4 +51,23 @@ func ValidateJWT(tokenString string, jwtSecret string) (jwt.MapClaims, error) {
 	}
 
 	return nil, jwt.ErrInvalidKey
+}
+
+// GetUserIDFromContext extracts user ID from gin context
+func GetUserIDFromContext(c *gin.Context) uint {
+	userID, exists := c.Get("userID")
+	if !exists {
+		return 0
+	}
+
+	if id, ok := userID.(uint); ok {
+		return id
+	}
+
+	// Try float64 conversion (JSON numbers default to float64)
+	if id, ok := userID.(float64); ok {
+		return uint(id)
+	}
+
+	return 0
 }
