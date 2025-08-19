@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchUserSkills, createSkill, deleteSkill } from '../features/skillSlice'
+import { fetchUserSkills, createSkill, deleteSkill, updateSkill, clearError } from '../features/skillSlice'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -11,10 +11,12 @@ import { Plus, Trash2, Edit, BookOpen, Target } from 'lucide-react'
 
 const Skills = () => {
   const dispatch = useDispatch()
-  const { userSkills, loading } = useSelector((state) => state.skills)
+  const { userSkills, loading, error } = useSelector((state) => state.skills)
+  const { user } = useSelector((state) => state.auth)
   const { toast } = useToast()
   
   const [showForm, setShowForm] = useState(false)
+  const [editingSkill, setEditingSkill] = useState(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -25,8 +27,35 @@ const Skills = () => {
   })
 
   useEffect(() => {
+    if (!user) {
+      return
+    }
+    
     dispatch(fetchUserSkills())
-  }, [dispatch])
+  }, [dispatch, user])
+
+  useEffect(() => {
+    if (editingSkill) {
+      setFormData({
+        title: editingSkill.title || '',
+        description: editingSkill.description || '',
+        category: editingSkill.category || '',
+        level: editingSkill.level || 'beginner',
+        skill_type: editingSkill.skill_type || 'offering',
+        tags: editingSkill.tags || ''
+      })
+      setShowForm(true)
+    } else {
+      setFormData({
+        title: '',
+        description: '',
+        category: '',
+        level: 'beginner',
+        skill_type: 'offering',
+        tags: ''
+      })
+    }
+  }, [editingSkill])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -41,11 +70,20 @@ const Skills = () => {
     }
 
     try {
-      await dispatch(createSkill(formData)).unwrap()
-      toast({
-        title: "Success",
-        description: "Skill added successfully!",
-      })
+      if (editingSkill) {
+        await dispatch(updateSkill({ id: editingSkill.id, skillData: formData })).unwrap()
+        toast({
+          title: "Success",
+          description: "Skill updated successfully!",
+        })
+      } else {
+        await dispatch(createSkill(formData)).unwrap()
+        toast({
+          title: "Success",
+          description: "Skill added successfully!",
+        })
+      }
+      
       setFormData({
         title: '',
         description: '',
@@ -55,13 +93,18 @@ const Skills = () => {
         tags: ''
       })
       setShowForm(false)
+      setEditingSkill(null)
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error?.message || error || "Failed to add skill",
+        description: error?.message || error || (editingSkill ? "Failed to update skill" : "Failed to add skill"),
       })
     }
+  }
+
+  const handleEdit = (skill) => {
+    setEditingSkill(skill)
   }
 
   const handleDelete = async (skillId) => {
@@ -85,6 +128,22 @@ const Skills = () => {
   const offeringSkills = userSkills.filter(skill => skill.skill_type === 'offering')
   const seekingSkills = userSkills.filter(skill => skill.skill_type === 'seeking')
 
+  if (!user) {
+    return (
+      <div className="max-w-6xl mx-auto p-8 text-center">
+        <h1 className="text-2xl font-bold mb-4">Please login to access skills</h1>
+      </div>
+    )
+  }
+
+  if (loading && userSkills.length === 0) {
+    return (
+      <div className="max-w-6xl mx-auto p-8 text-center">
+        <h1 className="text-2xl font-bold mb-4">Loading skills...</h1>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
@@ -93,18 +152,41 @@ const Skills = () => {
           <h1 className="text-3xl font-bold">Your Skills</h1>
           <p className="text-muted-foreground">Manage the skills you offer and seek</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
+        <Button onClick={() => {
+          setEditingSkill(null)
+          setShowForm(!showForm)
+        }}>
           <Plus className="h-4 w-4 mr-2" />
           Add Skill
         </Button>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h2 className="text-red-800 font-semibold">Error</h2>
+          <p className="text-red-600">{error}</p>
+          <Button 
+            onClick={() => {
+              dispatch(clearError())
+              dispatch(fetchUserSkills())
+            }} 
+            variant="outline" 
+            className="mt-2"
+          >
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Add Skill Form */}
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Add New Skill</CardTitle>
-            <CardDescription>Share your expertise or add a skill you want to learn</CardDescription>
+            <CardTitle>{editingSkill ? 'Edit Skill' : 'Add New Skill'}</CardTitle>
+            <CardDescription>
+              {editingSkill ? 'Update your skill information' : 'Share your expertise or add a skill you want to learn'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -185,9 +267,12 @@ const Skills = () => {
 
               <div className="flex gap-2">
                 <Button type="submit" disabled={loading}>
-                  Add Skill
+                  {editingSkill ? 'Update Skill' : 'Add Skill'}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                <Button type="button" variant="outline" onClick={() => {
+                  setShowForm(false)
+                  setEditingSkill(null)
+                }}>
                   Cancel
                 </Button>
               </div>
@@ -222,7 +307,7 @@ const Skills = () => {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(skill)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button 
@@ -285,7 +370,7 @@ const Skills = () => {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(skill)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button 
