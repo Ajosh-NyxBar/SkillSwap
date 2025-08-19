@@ -1,12 +1,17 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { fetchMatches } from '../features/skillSlice'
+import { createChatRoom } from '../features/chatSlice'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Users, Star, MessageCircle, Loader2 } from 'lucide-react'
+import { useToast } from '../components/ui/toaster'
 
 const Matches = () => {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const { toast } = useToast()
   const { matches, loading } = useSelector((state) => state.skills)
 
   useEffect(() => {
@@ -16,6 +21,23 @@ const Matches = () => {
   const handleStartExchange = (match) => {
     // This would open a modal or navigate to exchange creation
     console.log('Starting exchange with:', match)
+  }
+
+  const handleStartChat = async (match) => {
+    try {
+      await dispatch(createChatRoom({ other_user_id: match.user_id })).unwrap()
+      navigate('/chat')
+      toast({
+        title: "Success",
+        description: "Chat started successfully!",
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error || "Failed to start chat",
+      })
+    }
   }
 
   if (loading) {
@@ -87,15 +109,19 @@ const Matches = () => {
                 {/* Action Buttons */}
                 <div className="flex gap-2">
                   <Button 
-                    onClick={() => handleStartExchange(match)}
+                    onClick={() => handleStartChat(match)}
                     className="flex-1"
                     size="sm"
                   >
                     <MessageCircle className="h-4 w-4 mr-2" />
-                    Start Exchange
+                    Start Chat
                   </Button>
-                  <Button variant="outline" size="sm">
-                    View Profile
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleStartExchange(match)}
+                  >
+                    Exchange
                   </Button>
                 </div>
               </CardContent>
