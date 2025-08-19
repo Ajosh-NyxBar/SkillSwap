@@ -9,7 +9,8 @@ Platform inovatif untuk pertukaran keterampilan secara online. Belajar skill bar
 - **Skill Marketplace**: Post skill yang ditawarkan dan skill yang dicari
 - **Smart Matching**: Sistem otomatis mencocokkan user berdasarkan skill
 - **Exchange System**: Request dan kelola pertukaran skill
-- **Chat Integration**: Komunikasi dengan partner skill exchange
+- **Real-time Chat**: Sistem chat real-time dengan read receipts
+- **Chat Management**: Kelola percakapan dengan pencarian dan filter
 
 ### Tech Stack
 - **Backend**: Go + Gin + GORM + PostgreSQL + JWT
@@ -146,6 +147,16 @@ PUT  /api/exchanges/:id/status # Update exchange status
 GET  /api/matches           # Get skill matches for current user
 ```
 
+### Chat
+```
+GET    /api/chat/rooms                    # Get all chat rooms for current user
+POST   /api/chat/rooms                    # Create new chat room
+GET    /api/chat/rooms/:roomId/messages   # Get messages in a chat room
+POST   /api/chat/rooms/:roomId/messages   # Send message to a chat room
+PUT    /api/chat/rooms/:roomId/read       # Mark messages as read
+DELETE /api/chat/rooms/:roomId            # Delete chat room
+```
+
 ## 🗄️ Database Schema
 
 ### Users Table
@@ -198,6 +209,38 @@ CREATE TABLE exchanges (
 );
 ```
 
+### Chat Rooms Table
+```sql
+CREATE TABLE chat_rooms (
+    id SERIAL PRIMARY KEY,
+    user1_id INTEGER REFERENCES users(id),
+    user2_id INTEGER REFERENCES users(id),
+    exchange_id INTEGER REFERENCES exchanges(id),
+    is_active BOOLEAN DEFAULT TRUE,
+    last_message TEXT,
+    last_message_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);
+```
+
+### Messages Table
+```sql
+CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+    chat_room_id INTEGER REFERENCES chat_rooms(id),
+    sender_id INTEGER REFERENCES users(id),
+    content TEXT NOT NULL,
+    message_type VARCHAR(50) DEFAULT 'text', -- text, image, file, system
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);
+```
+
 ## 🎯 Usage Examples
 
 ### Register User
@@ -231,6 +274,28 @@ curl -X POST http://localhost:8080/api/skills \
 ```bash
 curl -X GET http://localhost:8080/api/matches \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Create Chat Room
+```bash
+curl -X POST http://localhost:8080/api/chat/rooms \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "other_user_id": 2,
+    "exchange_id": 1
+  }'
+```
+
+### Send Message
+```bash
+curl -X POST http://localhost:8080/api/chat/rooms/1/messages \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "content": "Hello! I would like to learn guitar from you.",
+    "message_type": "text"
+  }'
 ```
 
 ## 🚀 Deployment
@@ -304,6 +369,9 @@ Detailed API documentation is available in the backend README. Key features:
 - **Modern Design**: Clean, modern interface with Tailwind CSS
 - **Responsive**: Mobile-first responsive design
 - **Interactive**: Real-time updates and smooth animations
+- **Real-time Chat**: Instant messaging system with read receipts
+- **Chat Management**: Organized chat rooms with search functionality
+- **Message History**: Persistent message storage with date separators
 - **Accessible**: ARIA labels and keyboard navigation
 - **Dark Mode Ready**: Easy to implement dark mode support
 
@@ -371,8 +439,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ Basic matching algorithm
 - ✅ Exchange request system
 
-### Phase 2 (Next)
-- 🔄 Real-time chat system
+### Phase 2 (In Progress)
+- ✅ Real-time chat system
 - 🔄 Rating and review system
 - 🔄 Advanced matching algorithm
 - 🔄 Email notifications
