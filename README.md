@@ -7,10 +7,13 @@ Platform inovatif untuk pertukaran keterampilan secara online. Belajar skill bar
 ### Fitur Utama
 - **User System**: Register, Login, Profile Management
 - **Skill Marketplace**: Post skill yang ditawarkan dan skill yang dicari
-- **Smart Matching**: Sistem otomatis mencocokkan user berdasarkan skill
+- **Smart Matching**: Sistem otomatis mencocokkan user berdasarkan skill dengan algoritma ML-inspired
 - **Exchange System**: Request dan kelola pertukaran skill
 - **Real-time Chat**: Sistem chat real-time dengan read receipts
 - **Chat Management**: Kelola percakapan dengan pencarian dan filter
+- **Rating & Review System**: Rate pengalaman pertukaran skill dan baca review dari user lain
+- **Advanced Matching**: Algoritma matching yang mempertimbangkan rating, lokasi, aktivitas, dan preferensi
+- **Email Notifications**: Notifikasi email untuk request, status update, review baru, dan weekly digest
 
 ### Tech Stack
 - **Backend**: Go + Gin + GORM + PostgreSQL + JWT
@@ -145,6 +148,19 @@ PUT  /api/exchanges/:id/status # Update exchange status
 ### Matches
 ```
 GET  /api/matches           # Get skill matches for current user
+GET  /api/matches/advanced  # Get advanced matches with ML scoring
+```
+
+### Reviews
+```
+POST   /api/reviews          # Create new review
+GET    /api/reviews/my       # Get current user's reviews
+GET    /api/reviews/pending  # Get exchanges pending review
+GET    /api/reviews/:id      # Get review by ID
+PUT    /api/reviews/:id      # Update review
+DELETE /api/reviews/:id      # Delete review
+GET    /api/reviews/user/:userId        # Get reviews for user
+GET    /api/reviews/user/:userId/rating # Get user rating summary
 ```
 
 ### Chat
@@ -241,6 +257,38 @@ CREATE TABLE messages (
 );
 ```
 
+### Reviews Table
+```sql
+CREATE TABLE reviews (
+    id SERIAL PRIMARY KEY,
+    exchange_id INTEGER REFERENCES exchanges(id) UNIQUE,
+    reviewer_id INTEGER REFERENCES users(id),
+    reviewee_id INTEGER REFERENCES users(id),
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    tags TEXT, -- JSON string of predefined tags
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);
+```
+
+### User Ratings Table
+```sql
+CREATE TABLE user_ratings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) UNIQUE,
+    average_rating DECIMAL(3,2) DEFAULT 0,
+    total_reviews INTEGER DEFAULT 0,
+    rating_1_count INTEGER DEFAULT 0,
+    rating_2_count INTEGER DEFAULT 0,
+    rating_3_count INTEGER DEFAULT 0,
+    rating_4_count INTEGER DEFAULT 0,
+    rating_5_count INTEGER DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ## 🎯 Usage Examples
 
 ### Register User
@@ -296,6 +344,31 @@ curl -X POST http://localhost:8080/api/chat/rooms/1/messages \
     "content": "Hello! I would like to learn guitar from you.",
     "message_type": "text"
   }'
+```
+
+### Create Review
+```bash
+curl -X POST http://localhost:8080/api/reviews \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "exchange_id": 1,
+    "rating": 5,
+    "comment": "Great teacher! Very patient and knowledgeable.",
+    "tags": "helpful,patient,knowledgeable"
+  }'
+```
+
+### Get Advanced Matches
+```bash
+curl -X GET http://localhost:8080/api/matches/advanced \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Get User Rating
+```bash
+curl -X GET http://localhost:8080/api/reviews/user/2/rating \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ## 🚀 Deployment
@@ -372,6 +445,10 @@ Detailed API documentation is available in the backend README. Key features:
 - **Real-time Chat**: Instant messaging system with read receipts
 - **Chat Management**: Organized chat rooms with search functionality
 - **Message History**: Persistent message storage with date separators
+- **Rating System**: Interactive star ratings with visual feedback
+- **Review Management**: Write, edit, and delete reviews with tag support
+- **Advanced Matching**: Enhanced match scoring with multiple criteria display
+- **User Profiles**: Comprehensive user ratings and review displays
 - **Accessible**: ARIA labels and keyboard navigation
 - **Dark Mode Ready**: Easy to implement dark mode support
 
@@ -439,11 +516,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ Basic matching algorithm
 - ✅ Exchange request system
 
-### Phase 2 (In Progress)
+### Phase 2 (Completed ✅)
 - ✅ Real-time chat system
-- 🔄 Rating and review system
-- 🔄 Advanced matching algorithm
-- 🔄 Email notifications
+- ✅ Rating and review system
+- ✅ Advanced matching algorithm
+- ✅ Email notifications
 
 ### Phase 3 (Future)
 - 📅 Calendar integration
