@@ -11,6 +11,7 @@ import Matches from './pages/Matches'
 import Exchanges from './pages/Exchanges'
 import Chat from './pages/Chat'
 import Profile from './pages/Profile'
+import Reviews from './pages/Reviews'
 
 function App() {
   const { user, token } = useSelector((state) => state.auth)
@@ -50,6 +51,10 @@ function App() {
           <Route
             path="/chat"
             element={token ? <Chat /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/reviews"
+            element={token ? <Reviews /> : <Navigate to="/login" />}
           />
           <Route
             path="/profile"
