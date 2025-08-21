@@ -9,6 +9,7 @@ import {
   BookOpen, 
   Users, 
   MessageSquare,
+  Star,
   Menu
 } from 'lucide-react'
 import { useState } from 'react'
@@ -56,6 +57,10 @@ const Navbar = () => {
                 <Link to="/chat" className="flex items-center space-x-1 hover:text-primary-foreground/80">
                   <MessageSquare size={16} />
                   <span>Chat</span>
+                </Link>
+                <Link to="/reviews" className="flex items-center space-x-1 hover:text-primary-foreground/80">
+                  <Star size={16} />
+                  <span>Reviews</span>
                 </Link>
                 <Link to="/profile" className="flex items-center space-x-1 hover:text-primary-foreground/80">
                   <User size={16} />
