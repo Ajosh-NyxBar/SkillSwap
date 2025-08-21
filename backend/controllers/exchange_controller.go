@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"skillswap-backend/config"
 	"skillswap-backend/models"
+	"skillswap-backend/services"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -69,6 +70,12 @@ func (ec *ExchangeController) CreateExchange(c *gin.Context) {
 
 	// Load relationships
 	config.DB.Preload("Requester").Preload("Skill").Preload("Skill.User").First(&exchange, exchange.ID)
+
+	// Send email notification to skill owner
+	go func() {
+		emailService := &services.EmailService{}
+		emailService.SendExchangeRequestNotification(exchange)
+	}()
 
 	c.JSON(http.StatusCreated, exchange)
 }
@@ -190,6 +197,12 @@ func (ec *ExchangeController) UpdateExchangeStatus(c *gin.Context) {
 
 	// Load relationships
 	config.DB.Preload("Requester").Preload("Skill").Preload("Skill.User").First(&exchange, exchange.ID)
+
+	// Send email notification to requester about status change
+	go func() {
+		emailService := &services.EmailService{}
+		emailService.SendExchangeStatusUpdateNotification(exchange)
+	}()
 
 	c.JSON(http.StatusOK, exchange)
 }
