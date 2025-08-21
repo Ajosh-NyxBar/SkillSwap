@@ -15,6 +15,7 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB) {
 	exchangeController := &controllers.ExchangeController{}
 	matchController := &controllers.MatchController{}
 	chatController := &controllers.ChatController{}
+	reviewController := &controllers.ReviewController{}
 
 	// API group
 	api := router.Group("/api")
@@ -62,6 +63,7 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB) {
 			matches := protected.Group("/matches")
 			{
 				matches.GET("", matchController.GetMatches)
+				matches.GET("/advanced", matchController.GetAdvancedMatches)
 			}
 
 			// Chat routes
@@ -73,6 +75,19 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB) {
 				chat.POST("/rooms/:roomId/messages", chatController.SendMessage)
 				chat.PUT("/rooms/:roomId/read", chatController.MarkMessagesAsRead)
 				chat.DELETE("/rooms/:roomId", chatController.DeleteChatRoom)
+			}
+
+			// Review routes
+			reviews := protected.Group("/reviews")
+			{
+				reviews.POST("", reviewController.CreateReview)
+				reviews.GET("/my", reviewController.GetMyReviews)
+				reviews.GET("/pending", reviewController.GetPendingReviews)
+				reviews.GET("/:id", reviewController.GetReviewByID)
+				reviews.PUT("/:id", reviewController.UpdateReview)
+				reviews.DELETE("/:id", reviewController.DeleteReview)
+				reviews.GET("/user/:userId", reviewController.GetReviews)
+				reviews.GET("/user/:userId/rating", reviewController.GetUserRating)
 			}
 		}
 	}
