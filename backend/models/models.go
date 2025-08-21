@@ -20,8 +20,11 @@ type User struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	OfferedSkills []Skill    `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"offered_skills,omitempty"`
-	Exchanges     []Exchange `gorm:"foreignKey:RequesterID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"exchanges,omitempty"`
+	OfferedSkills   []Skill     `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"offered_skills,omitempty"`
+	Exchanges       []Exchange  `gorm:"foreignKey:RequesterID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"exchanges,omitempty"`
+	UserRating      *UserRating `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"user_rating,omitempty"`
+	GivenReviews    []Review    `gorm:"foreignKey:ReviewerID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"given_reviews,omitempty"`
+	ReceivedReviews []Review    `gorm:"foreignKey:RevieweeID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"received_reviews,omitempty"`
 }
 
 type Skill struct {
@@ -107,4 +110,40 @@ type Message struct {
 	// Relationships
 	ChatRoom ChatRoom `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"chat_room,omitempty"`
 	Sender   User     `gorm:"foreignKey:SenderID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"sender,omitempty"`
+}
+
+// Review represents a review for a completed exchange
+type Review struct {
+	ID         uint           `gorm:"primaryKey" json:"id"`
+	ExchangeID uint           `gorm:"not null;uniqueIndex" json:"exchange_id"` // One review per exchange
+	ReviewerID uint           `gorm:"not null" json:"reviewer_id"`             // Who wrote the review
+	RevieweeID uint           `gorm:"not null" json:"reviewee_id"`             // Who received the review
+	Rating     int            `gorm:"not null" json:"rating" validate:"required,min=1,max=5"`
+	Comment    string         `gorm:"type:text" json:"comment"`
+	Tags       string         `json:"tags"` // JSON string of predefined tags like "helpful", "patient", "knowledgeable"
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
+
+	// Relationships
+	Exchange Exchange `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"exchange,omitempty"`
+	Reviewer User     `gorm:"foreignKey:ReviewerID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"reviewer,omitempty"`
+	Reviewee User     `gorm:"foreignKey:RevieweeID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"reviewee,omitempty"`
+}
+
+// UserRating represents aggregated rating data for a user
+type UserRating struct {
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	UserID        uint      `gorm:"not null;uniqueIndex" json:"user_id"`
+	AverageRating float64   `gorm:"default:0" json:"average_rating"`
+	TotalReviews  int       `gorm:"default:0" json:"total_reviews"`
+	Rating1Count  int       `gorm:"default:0" json:"rating_1_count"`
+	Rating2Count  int       `gorm:"default:0" json:"rating_2_count"`
+	Rating3Count  int       `gorm:"default:0" json:"rating_3_count"`
+	Rating4Count  int       `gorm:"default:0" json:"rating_4_count"`
+	Rating5Count  int       `gorm:"default:0" json:"rating_5_count"`
+	UpdatedAt     time.Time `json:"updated_at"`
+
+	// Relationships
+	User User `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"user,omitempty"`
 }
